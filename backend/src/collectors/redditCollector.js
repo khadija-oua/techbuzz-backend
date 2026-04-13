@@ -1,0 +1,62 @@
+require('dotenv').config();
+const axios = require('axios');
+
+const TECH_SUBREDDITS = [
+  'programming',
+  'webdev', 
+  'MachineLearning',
+  'javascript',
+  'Python',
+  'artificial',
+  'devops',
+  'opensource'
+];
+
+const HEADERS = {
+  'User-Agent': 'TechBuzzTracker/1.0 (educational project)',
+  'Accept': 'application/json',
+};
+
+async function fetchSubredditPosts(subreddit, limit = 100) {
+  const url = `https://www.reddit.com/r/${subreddit}/hot.json?limit=${limit}`;
+  
+  const res = await axios.get(url, { headers: HEADERS });
+  const posts = res.data.data.children;
+
+  return posts.map(({ data }) => ({
+    redditId:    data.id,
+    title:       data.title,
+    subreddit:   data.subreddit,
+    score:       data.score,
+    upvoteRatio: data.upvote_ratio,
+    numComments: data.num_comments,
+    url:         data.url,
+    flair:       data.link_flair_text || null,
+    createdAt:   new Date(data.created_utc * 1000),
+    collectedAt: new Date(),
+  }));
+}
+
+async function fetchAllSubreddits() {
+  const allPosts = [];
+
+  for (const sub of TECH_SUBREDDITS) {
+    try {
+      console.log(`[Collector] Fetching r/${sub}...`);
+      const posts = await fetchSubredditPosts(sub);
+      allPosts.push(...posts);
+
+      // Pause 2 secondes entre chaque requête
+      // pour éviter d'être bloqué par Reddit
+      await new Promise(r => setTimeout(r, 2000));
+
+    } catch (err) {
+      console.error(`[Collector] Erreur r/${sub}:`, err.message);
+    }
+  }
+
+  console.log(`[Collector] Total collecté : ${allPosts.length} posts`);
+  return allPosts;
+}
+
+module.exports = { fetchAllSubreddits, fetchSubredditPosts };
