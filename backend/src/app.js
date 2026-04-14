@@ -8,7 +8,7 @@ const { expressMiddleware } = require('@apollo/server/express4');
 const { makeExecutableSchema } = require('@graphql-tools/schema');
 const { WebSocketServer } = require('ws');
 const { useServer } = require('graphql-ws/use/ws');
-const { connect: connectRedis, subscriber, getLatestTrends } = require('./services/redisService');
+const { connect: connectRedis } = require('./services/redisService');
 const { startScheduler } = require('./services/scheduler');
 const { typeDefs } = require('./graphql/schema');
 const { resolvers } = require('./graphql/resolvers');
@@ -42,6 +42,14 @@ async function start() {
 
   // Health check
   app.get('/health', (req, res) => res.json({ status: 'ok' }));
+
+  app.get('/', (req, res) => {
+  res.json({
+    status: 'ok',
+    graphql: 'http://localhost:3001/graphql',
+    health: 'http://localhost:3001/health'
+        });
+    });
 
   // Scheduler
   startScheduler();
