@@ -1,46 +1,49 @@
 require('dotenv').config();
-const express    = require('express');
-const http       = require('http');
-const { Server } = require('socket.io');
-const mongoose   = require('mongoose');
-const cors       = require('cors');
-
+const express = require('express');
+const http = require('http');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const { ApolloServer } = require('@apollo/server');
+const { expressMiddleware } = require('@apollo/server/express4');
+const { makeExecutableSchema } = require('@graphql-tools/schema');
+const { WebSocketServer } = require('ws');
+const { useServer } = require('graphql-ws/use/ws');
 const { connect: connectRedis, subscriber, getLatestTrends } = require('./services/redisService');
 const { startScheduler } = require('./services/scheduler');
+const { typeDefs } = require('./graphql/schema');
+const { resolvers } = require('./graphql/resolvers');
 
-const app    = express();
+const app = express();
 const server = http.createServer(app);
-const io     = new Server(server, { cors: { origin: '*' } });
 
-app.use(cors());
-app.use(express.json());
-
-// Route santé
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
-});
-
-// Route tendances actuelles (depuis cache Redis)
-app.get('/api/trends/current', async (req, res) => {
-  const trends = await getLatestTrends();
-  res.json(trends || []);
-});
-
-// WebSocket : relais Redis → Frontend
-async function setupRedisListener() {
-  await subscriber.subscribe('trends:update', (message) => {
-    console.log('[Socket.io] Push tendances vers frontend');
-    io.emit('trends:update', JSON.parse(message));
-  });
-}
 
 async function start() {
+  // MongoDB
   await mongoose.connect(process.env.MONGO_URI);
   console.log('[MongoDB] Connecté');
 
+  // Redis
   await connectRedis();
-  await setupRedisListener();
 
+  // Schema GraphQL
+  const schema = makeExecutableSchema({ typeDefs, resolvers });
+
+  // WebSocket pour Subscriptions
+  const wsServer = new WebSocketServer({ server, path: '/graphql' });
+  useServer({ schema }, wsServer);
+  console.log('[GraphQL] WebSocket Subscriptions actif');
+
+  // Apollo Server
+  const apolloServer = new ApolloServer({ schema });
+  await apolloServer.start();
+
+  app.use('/graphql', cors(), express.json(), expressMiddleware(apolloServer));
+  console.log('[GraphQL] Apollo Server actif sur /graphql');
+
+  // Health check
+  app.get('/health', (req, res) => res.json({ status: 'ok' }));
+
+  // Scheduler
   startScheduler();
 
   server.listen(process.env.PORT || 3001, () => {

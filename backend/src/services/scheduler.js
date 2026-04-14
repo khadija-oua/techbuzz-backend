@@ -16,7 +16,7 @@ async function runCollection() {
     await Post.findOneAndUpdate(
       { redditId: post.redditId },
       post,
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
   }
   console.log(`[Scheduler] ${posts.length} posts sauvegardés`);
