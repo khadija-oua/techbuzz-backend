@@ -65,9 +65,9 @@ async function fetchAllSubreddits() {
       const posts = await fetchSubredditPosts(sub);
       allPosts.push(...posts);
 
-      // Pause 2.1 secondes entre chaque requête
+      // Pause 5 secondes entre chaque requête
       // pour éviter d'être bloqué par Reddit
-      await new Promise(r => setTimeout(r, 2100));
+      await new Promise(r => setTimeout(r, 5000));
 
     } catch (err) {
       console.error(`[Collector] Erreur r/${sub}:`, err.message);
