@@ -90,7 +90,7 @@ async function computeTrends(hoursBack = 24) {
     })
     .filter(d => d.count >= 2)
     .sort((a, b) => (b.totalScore + b.momentum * 10) - (a.totalScore + a.momentum * 10))
-    .slice(0, 50);
+    .slice(0, 40);
 }
 
 module.exports = { extractKeywords, computeTrends };
