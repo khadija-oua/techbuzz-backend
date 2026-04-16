@@ -64,7 +64,7 @@ async function fetchSubredditPosts(subreddit, limit = 100) {
 }
 
 async function fetchAllSubreddits() {
-  let totalAdded = 0;
+  let allPosts = [];
 
   for (const sub of TECH_SUBREDDITS) {
     try {
@@ -72,7 +72,7 @@ async function fetchAllSubreddits() {
       const posts = await fetchSubredditPosts(sub);
       console.log(`[Collector] r/${sub} → ${posts.length} posts collectés`);
 
-      // 👉 Envoie directement dans la Raw Queue
+      // 👉 Envoie dans la Raw Queue
       const addedCount = await addRawPosts(posts);
       console.log(`[Collector] r/${sub} → ${addedCount} posts envoyés dans raw_posts`);
 
@@ -81,7 +81,8 @@ async function fetchAllSubreddits() {
         await saveRawPost(p);
       }
 
-      totalAdded += addedCount;
+      // 👉 Ajoute au tableau global
+      allPosts.push(...posts);
 
       // Pause pour éviter le blocage par Reddit
       await new Promise(r => setTimeout(r, 5000));
@@ -91,8 +92,10 @@ async function fetchAllSubreddits() {
     }
   }
 
-  console.log(`[Collector] Total envoyé dans la Raw Queue: ${totalAdded} posts`);
-  return totalAdded;
+  console.log(`[Collector] Total collecté: ${allPosts.length} posts`);
+  return allPosts; // 👉 retourne un tableau de posts valides
+}
+
 
   // Fonction d'insertion dans RawPost Base de données (non utilisée directement, mais peut être utile pour tests ou autres usages)
   async function saveRawPost(redditPost) {
@@ -122,5 +125,4 @@ async function fetchAllSubreddits() {
   }
 }
 
-}
 module.exports = { fetchAllSubreddits, fetchSubredditPosts };
