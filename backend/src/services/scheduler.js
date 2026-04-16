@@ -12,10 +12,6 @@ async function runCollection() {
     const posts = await fetchAllSubreddits();
     console.log(`[Scheduler] ${posts.length} posts récupérés depuis Reddit`);
 
-    // 2. Envoie dans BullMQ — le pipeline prend le relais
-    const count = await addRawPosts(posts);
-    console.log(`[Scheduler] ${count} posts uniques envoyés dans le pipeline`);
-
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
     console.log(`[Scheduler] Collecte terminée en ${duration}s`);
     console.log('[Scheduler] ━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
