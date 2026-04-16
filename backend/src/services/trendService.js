@@ -1,38 +1,11 @@
-const Post = require('../models/Post');
-
-const TECH_KEYWORDS = [
-  // Langages
-  'python', 'javascript', 'typescript', 'rust', 'golang', 'java',
-  'kotlin', 'swift', 'php', 'ruby', 'scala', 'cpp', 'c++',
-  // Frameworks
-  'react', 'vue', 'angular', 'nextjs', 'svelte', 'fastapi',
-  'django', 'flask', 'express', 'spring', 'laravel',
-  // IA / ML
-  'ai', 'machine learning', 'deep learning', 'llm', 'gpt',
-  'chatgpt', 'claude', 'gemini', 'tensorflow', 'pytorch',
-  'neural network', 'nlp', 'computer vision',
-  // DevOps / Cloud
-  'docker', 'kubernetes', 'aws', 'azure', 'gcp',
-  'terraform', 'devops', 'ci/cd', 'linux',
-  // Bases de données
-  'mongodb', 'postgresql', 'mysql', 'redis', 'elasticsearch',
-  'sqlite', 'supabase', 'prisma',
-  // Tendances
-  'webassembly', 'wasm', 'blockchain', 'web3', 'graphql',
-  'microservices', 'serverless', 'edge computing',
-];
-
-function extractKeywords(title) {
-  const lower = title.toLowerCase();
-  return TECH_KEYWORDS.filter(kw => lower.includes(kw));
-}
+const EnrichedPost = require('../models/EnrichedPost');
 
 async function computeTrends(hoursBack = 24) {
   const since = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
 
-  const posts = await Post.find({ collectedAt: { $gte: since } });
-  const recentPosts = await Post.find({ collectedAt: { $gte: oneHourAgo } });
+  const posts = await EnrichedPost.find({ enrichedAt: { $gte: since } });
+  const recentPosts = await EnrichedPost.find({ enrichedAt: { $gte: oneHourAgo } });
 
   // Compter les occurrences récentes pour le momentum
   const recentMap = {};
@@ -50,28 +23,27 @@ async function computeTrends(hoursBack = 24) {
           keyword: kw,
           count: 0,
           totalScore: 0,
-          totalComments: 0,
           recentCount: recentMap[kw] || 0,
           sentimentScores: [],
-          subreddits: new Set(),
-          posts: [],
+          sentimentDistribution: { positive: 0, negative: 0, neutral: 0 },
+          category: post.category || null,
         };
       }
       map[kw].count++;
-      map[kw].totalScore += post.score;
-      map[kw].totalComments += post.numComments;
-      map[kw].subreddits.add(post.subreddit);
+      map[kw].totalScore += post.engagementScore || 0;
       map[kw].sentimentScores.push(post.sentimentScore || 0);
-      map[kw].posts.push({ title: post.title, score: post.score, url: post.url });
+
+      // Distribution des sentiments
+      if (post.sentiment === 'positive') map[kw].sentimentDistribution.positive++;
+      else if (post.sentiment === 'negative') map[kw].sentimentDistribution.negative++;
+      else map[kw].sentimentDistribution.neutral++;
     }
   }
 
   return Object.values(map)
     .map(d => {
-      const avgScore = Math.round(d.totalScore / d.count);
-      const momentum = d.count > 0 
-        ? Math.round((d.recentCount / d.count) * 100) 
-        : 0;
+      const avgScore = d.count > 0 ? Math.round(d.totalScore / d.count) : 0;
+      const momentum = d.count > 0 ? Math.round((d.recentCount / d.count) * 100) : 0;
       const avgSentiment = d.sentimentScores.length > 0
         ? d.sentimentScores.reduce((a, b) => a + b, 0) / d.sentimentScores.length
         : 0;
@@ -81,11 +53,10 @@ async function computeTrends(hoursBack = 24) {
         count: d.count,
         totalScore: d.totalScore,
         avgScore,
-        totalComments: d.totalComments,
-        momentum,        // % des mentions dans la dernière heure
+        momentum,
         avgSentiment: Math.round(avgSentiment * 100) / 100,
-        subreddits: [...d.subreddits],
-        topPost: d.posts.sort((a, b) => b.score - a.score)[0],
+        sentimentDistribution: d.sentimentDistribution,
+        category: d.category,
       };
     })
     .filter(d => d.count >= 2)
@@ -93,4 +64,4 @@ async function computeTrends(hoursBack = 24) {
     .slice(0, 40);
 }
 
-module.exports = { extractKeywords, computeTrends };
+module.exports = { computeTrends };
