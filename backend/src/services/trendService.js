@@ -1,5 +1,15 @@
 const EnrichedPost = require('../models/EnrichedPost');
 
+
+function extractKeywords(title) {
+  if (!title) return [];
+  return title
+    .toLowerCase()
+    .split(/\s+/)
+    .map(word => word.replace(/[^a-z0-9]/gi, '')) // nettoyage des caractères spéciaux
+    .filter(word => word.length > 3); // filtre les stopwords trop courts
+}
+
 async function computeTrends(hoursBack = 24) {
   const since = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
@@ -64,4 +74,4 @@ async function computeTrends(hoursBack = 24) {
     .slice(0, 40);
 }
 
-module.exports = { computeTrends };
+module.exports = { extractKeywords, computeTrends};
