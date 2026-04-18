@@ -9,6 +9,7 @@ let enrichedCount = 0;
 let failedCount   = 0;
 
 const nlpWorker = createWorker('processed_posts', async (job) => {
+  const end = metrics.jobDuration.startTimer({ worker: 'nlp' });
   const post = job.data;
 
   try {
@@ -34,10 +35,12 @@ const nlpWorker = createWorker('processed_posts', async (job) => {
     metrics.jobsFailed.inc({ worker: 'NLPWorker' });
     logger.error('[NLPWorker] Erreur enrichissement:', err.message);
     return { failed: true, redditId: post.redditId };
+  }finally {
+    end(); // ← toujours exécuté, succès ou erreur
   }
-}, {
+  }, {
   concurrency: 5,
-});
+  });
 
 // Stats toutes les minutes
 setInterval(() => {
