@@ -22,6 +22,8 @@ const { createBullBoard } = require('@bull-board/api');
 const { ExpressAdapter } = require('@bull-board/express');
 
 const { rawQueue, processedQueue, enrichedQueue } = require('./queues/postQueue');
+const { metrics, registry } = require('./monitoring/metrics');
+const logger = require('./utils/logger');
 
 // Crée l’adaptateur Express
 const serverAdapter = new ExpressAdapter();
@@ -41,13 +43,10 @@ createBullBoard({
 app.use('/admin/queues', serverAdapter.getRouter());
 
 
-
-
-
-
 async function start() {
   // MongoDB
-   await connectDB();
+  await connectDB();
+  metrics.mongoConnected.set(1);
   // Redis
   await connectRedis();
 
@@ -57,14 +56,23 @@ async function start() {
   // WebSocket pour Subscriptions
   const wsServer = new WebSocketServer({ server, path: '/graphql' });
   useServer({ schema }, wsServer);
-  console.log('[GraphQL] WebSocket Subscriptions actif');
+  logger.info('[GraphQL] WebSocket Subscriptions actif');
 
+  app.get('/metrics', async (req, res) => {
+  try {
+    res.set('Content-Type', registry.contentType);
+    res.end(await registry.metrics());
+  } catch (err) {
+    logger.error(`[Metrics] ${err.message}`);
+    res.status(500).end(err.message);
+  }
+});
   // Apollo Server
   const apolloServer = new ApolloServer({ schema });
   await apolloServer.start();
 
   app.use('/graphql', cors(), express.json(), expressMiddleware(apolloServer));
-  console.log('[GraphQL] Apollo Server actif sur /graphql');
+  logger.info('[GraphQL] Apollo Server actif sur /graphql');
 
   // Health check
   app.get('/health', (req, res) => res.json({ status: 'ok' }));
@@ -86,8 +94,8 @@ async function start() {
 
 
   server.listen(process.env.PORT || 3001, () => {
-    console.log(`[Express] Serveur actif sur http://localhost:${process.env.PORT || 3001}`);
+    logger.info(`[Express] Serveur actif sur http://localhost:${process.env.PORT || 3001}`);
   });
 }
 
-start().catch(console.error);
+start().catch(logger.error);
