@@ -38,12 +38,8 @@ async function fetchSubredditPosts(subreddit, limit = 100) {
   const posts = res.data.data.children;
 
   return posts.map(({ data }) => {
-     // On prend quelques mots-clés pour la classification
-    const keywords = [
-      data.subreddit.toLowerCase(),
-      ...(data.title.toLowerCase().split(' ')) // découper le titre en mots
-    ];
-    const category = getCategory(keywords);
+    
+    const category = getCategory([data.subreddit.toLowerCase()]);
 
     return {
         redditId:    data.id,
