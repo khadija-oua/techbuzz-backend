@@ -26,7 +26,7 @@ API Reddit
 redditCollector.js           ← Récupère les posts bruts
     │
     ▼
-postQueue (Bull / Redis)     ← File de traitement asynchrone
+postQueue (BullMQ)     ← File de traitement asynchrone
     │
     ├──▶ cleanWorker.js       ← Nettoyage des données  →  Modèle CleanPost
     │
