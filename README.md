@@ -1,4 +1,4 @@
-# Social Pulse INPT – Backend (Minimal Version)
+# Social Pulse INPT – Backend 
 
 Social Pulse INPT – Application Web Full-Stack sur les tendances technologiques basée sur les réseaux sociaux avec Pred. IA  
 Cette première version **backend minimaliste** collecte du contenu technique (Reddit), le traite et l’expose via une API GraphQL.
@@ -6,50 +6,89 @@ Cette première version **backend minimaliste** collecte du contenu technique (R
 ---
 
 ## 🚀 Fonctionnalités déjà implémentées
-
-- **[Collecteur Reddit](ca://s?q=Collecteur_Reddit)**  
-  - Module `redditCollector.js` pour récupérer les posts depuis plusieurs subreddits techniques.  
-  - Scheduler (`scheduler.js`) basé sur `node-cron` pour lancer la collecte toutes les 10 minutes.
-
-- **[Services](ca://s?q=Services_backend)**  
-  - `trendService.js` : filtrage, tri et classification des posts par catégories (AI, Languages, DevOps, Database, Frontend).  
-  - `sentimentService.js` : analyse de sentiment des contenus.  
-  - `categoryService.js` : attribution de catégories aux posts.  
-  - `redisService.js` : gestion du cache et Pub/Sub avec Redis.
-
-- **[Modèles](ca://s?q=Models_backend)**  
-  - `Post.js` : schéma MongoDB pour les posts enrichis.  
-  - `TrendSnapshot.js` : schéma MongoDB pour les tendances calculées.
-
-- **[API GraphQL](ca://s?q=GraphQL_backend)**  
-  - `schema.js` et `resolvers.js` définissent les queries et mutations.  
-  - Apollo Server expose l’API sur `/graphql`.  
-  - WebSocket activé pour les subscriptions en temps réel.
-
-- **[Config](ca://s?q=Config_backend)**  
-  - Centralisation des variables d’environnement et paramètres.  
-  - Fichier `.env` pour MongoDB, Redis, et port du serveur.
+- 🔍 **Collecteur Reddit** — Scrape automatiquement les subreddits tech pour récupérer les derniers posts
+- 🧹 **Processeur de nettoyage** — Assainit et normalise les données brutes
+- 🧠 **Processeur NLP** — Extrait les entités, mots-clés et résumés
+- 💬 **Analyse de sentiment** — Score le ton des posts (positif / négatif / neutre)
+- 📂 **Service de catégories** — Classifie automatiquement les posts par thème tech
+- 📈 **Service de tendances** — Détecte les sujets tendance en temps réel
+- ⚡ **File Redis** — Files d'attente Bull pour le traitement asynchrone
+- 🔌 **API GraphQL** — Interrogation flexible des données enrichies
+- 📊 **Métriques Prometheus** — Observabilité et monitoring intégrés
 
 ---
 
-## 🏗️ Architecture actuelle
+## 🏗️ Architecture Actuelle
 ```
-src/
-├── collectors/
-│   └── redditCollector.js
-├── config/
-├── graphql/
-│   ├── schema.js
-│   └── resolvers.js
-├── models/
-│   ├── Post.js
-│   └── TrendSnapshot.js
-├── routes/
-├── services/
-│   ├── categoryService.js
-│   ├── redisService.js
-│   ├── scheduler.js
-│   ├── sentimentService.js
-│   └── trendService.js
-└── app.js
+API Reddit
+    │
+    ▼
+redditCollector.js           ← Récupère les posts bruts
+    │
+    ▼
+postQueue (Bull / Redis)     ← File de traitement asynchrone
+    │
+    ├──▶ cleanWorker.js       ← Nettoyage des données  →  Modèle CleanPost
+    │
+    ├──▶ nlpWorker.js         ← Enrichissement NLP     →  Modèle EnrichedPost
+    │
+    └──▶ trendWorker.js       ← Détection de tendances →  Modèle TrendSnapshot
+                │
+                ▼
+        API GraphQL (resolvers + schema)
+                │
+                ▼
+          Applications clientes
 ```
+ 
+---
+
+## 📁 Structure du projet Actuelle
+ 
+```
+backend/
+├── logs/
+│   ├── combined.log
+│   └── error.log
+├── src/
+│   ├── collectors/
+│   │   └── redditCollector.js       # Scraper de l'API Reddit
+│   ├── config/
+│   │   ├── db.js                    # Configuration de la base de données
+│   │   └── redis.js                 # Connexion Redis
+│   ├── graphql/
+│   │   ├── resolvers.js             # Résolveurs GraphQL
+│   │   └── schema.js                # Définitions des types GraphQL
+│   ├── models/
+│   │   ├── CleanPost.js             # Schéma des posts nettoyés
+│   │   ├── EnrichedPost.js          # Schéma des posts enrichis par NLP
+│   │   ├── Post.js                  # Schéma de base des posts
+│   │   ├── RawPost.js               # Schéma des posts bruts Reddit
+│   │   └── TrendSnapshot.js         # Schéma des données de tendances
+│   ├── monitoring/
+│   │   └── metrics.js               # Métriques Prometheus
+│   ├── processors/
+│   │   ├── cleanProcessor.js        # Logique de nettoyage
+│   │   └── nlpProcessor.js          # Logique de traitement NLP
+│   ├── queues/
+│   │   ├── index.js                 # Initialisation des files
+│   │   └── postQueue                # Définition de la file Bull
+│   ├── routes/                      
+│   ├── services/
+│   │   ├── categoryService.js       # Catégorisation des posts
+│   │   ├── redisService.js          # Helpers Redis
+│   │   ├── scheduler.js             # Planificateur de tâches (cron)
+│   │   ├── sentimentService.js      # Analyse de sentiment
+│   │   └── trendService.js          # Calcul des tendances
+│   ├── utils/
+│   │   └── logger.js                # Logger Winston
+│   ├── workers/
+│   │   ├── cleanWorker.js           # Consommateur de la file de nettoyage
+│   │   ├── nlpWorker.js             # Consommateur de la file NLP
+│   │   └── trendWorker.js           # Consommateur de la file de tendances
+│   └── app.js                       # Point d'entrée Express
+├── test/                            # Suite de tests
+├── .env                             # Variables d'environnement
+├── docker-compose.yml               # Services Docker
+├── package.json
+└── prometheus.yml                   # Configuration Prometheus
