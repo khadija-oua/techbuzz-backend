@@ -24,6 +24,9 @@ const { ExpressAdapter } = require('@bull-board/express');
 const { rawQueue, processedQueue, enrichedQueue } = require('./queues/postQueue');
 const { metrics, registry } = require('./monitoring/metrics');
 const logger = require('./utils/logger');
+const { listenForNLPResults } = require('./services/pythonBridgeService');
+
+
 
 // Crée l’adaptateur Express
 const serverAdapter = new ExpressAdapter();
@@ -49,6 +52,18 @@ async function start() {
   metrics.mongoConnected.set(1);
   // Redis
   await connectRedis();
+  
+  // Attendre que le bridge Redis soit prêt avant d'écouter
+const { redis: redisBridge } = require('./services/pythonBridgeService');
+
+await new Promise((resolve, reject) => {
+  if (redisBridge.status === 'ready') return resolve();
+  redisBridge.once('ready', resolve);
+  redisBridge.once('error', reject);
+});
+
+  listenForNLPResults();
+  logger.info('🔗 Pont Node.js ↔ Python NLP activé');
 
   // Schema GraphQL
   const schema = makeExecutableSchema({ typeDefs, resolvers });
