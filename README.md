@@ -1,7 +1,7 @@
 # Social Pulse INPT – Backend 
 
 Social Pulse INPT – Application Web Full-Stack sur les tendances technologiques basée sur les réseaux sociaux avec Pred. IA  
-Cette première version **backend minimaliste** collecte du contenu technique (Reddit), le traite et l’expose via une API GraphQL.
+Cette première version **backend minimaliste** collecte du contenu technique (Reddit), le traite et l’expose via une API GraphQL .
 
 ---
 
